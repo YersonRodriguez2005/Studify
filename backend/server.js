@@ -9,6 +9,7 @@ const notasRoutes = require("./routes/notas");
 const cursosRoutes = require("./routes/cursos");
 const planificadorRoutes = require("./routes/planificador");
 const recursosRoutes = require("./routes/recursos");
+const authRoutes = require("./routes/auth");
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/notas", notasRoutes);
 app.use("/api/cursos", cursosRoutes);
 app.use("/api/planificador", planificadorRoutes);
 app.use("/api/recursos", recursosRoutes);
+app.use("/api/auth", authRoutes);
 
 // Ruta inicial
 app.get("/", (req, res) => {

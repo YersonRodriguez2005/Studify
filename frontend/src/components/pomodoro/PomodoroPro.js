@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -24,6 +24,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTimer } from "../../context/TimerContext";
 
+const API_URL = "http://localhost:5000/api"; // Ajusta esto a tu URL de backend
+
 const PomodoroPro = () => {
   const navigate = useNavigate();
   const {
@@ -34,7 +36,76 @@ const PomodoroPro = () => {
     setTimerMode,
     history,
     deleteSession,
+    setHistory, // Asegúrate de tener esto en tu contexto
   } = useTimer();
+
+  // Verificar autenticación y obtener datos del usuario
+  const checkAuth = useCallback(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      return null;
+    }
+    return token;
+  }, [navigate]);
+
+  // Obtener el historial de sesiones del usuario
+  const fetchSessions = useCallback(async () => {
+    const token = checkAuth();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data.sessions);
+      } else if (response.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Error al obtener las sesiones:", error);
+    }
+  }, [navigate, setHistory, checkAuth]);
+
+  // Eliminar una sesión
+  const handleDeleteSession = async (sessionId) => {
+    const token = checkAuth();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        deleteSession(sessionId);
+      } else if (response.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Error al eliminar la sesión:", error);
+    }
+  };
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const token = checkAuth();
+    if (token) {
+      fetchSessions();
+    }
+  }, [checkAuth, fetchSessions]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -80,6 +151,7 @@ const PomodoroPro = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-4 sm:p-6">
+      {/* El resto del JSX permanece igual */}
       <div className="container mx-auto max-w-5xl">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <button
@@ -95,6 +167,7 @@ const PomodoroPro = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Timer Controls */}
           <div className="space-y-8">
             <div className="flex flex-wrap justify-center gap-3">
               {[
@@ -149,6 +222,7 @@ const PomodoroPro = () => {
             </div>
           </div>
 
+          {/* History Section */}
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <History className="w-5 h-5 text-blue-400" />
@@ -174,7 +248,7 @@ const PomodoroPro = () => {
                         </span>
                       </div>
                       <button
-                        onClick={() => deleteSession(session.id_sesion)}
+                        onClick={() => handleDeleteSession(session.id_sesion)}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-all duration-300"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -192,6 +266,7 @@ const PomodoroPro = () => {
           </div>
         </div>
 
+        {/* Charts Section */}
         {Array.isArray(history) && history.length > 0 && (
           <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
             <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
